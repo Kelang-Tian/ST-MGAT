@@ -1,6 +1,6 @@
 # STGAT: Spatial-Temporal Graph Attention Networks for Traffic Flow Forecasting
 <p align="center">
-  <img width="600" height="450" src=./figure/process.pdf>
+  <img width="600" height="450" src=./figure/process.jpeg>
 </p>
 
 This is the implementation of Spatial-Temporal Graph Attention Networks for Traffic Flow Forecasting(for IJCAI 2020)
