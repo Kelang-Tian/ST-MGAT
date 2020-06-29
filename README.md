@@ -2,7 +2,8 @@
 <p align="center">
   <img width="600" height="450" src=./figure/architecture.jpg>
 </p>
-hahahahah
+
+![image](https://github.com/Kelang-Tian/ST-MGAT/blob/master/figure/architecture.jpg)
 
 This is a Pytorch implementation of Spatial-Temporal Multi-Head Graph Attention Networks for Traffic Forecasting,
 which combines the graph attention convolution (GAT) and the dilated convolution structure with gate mechanisms.
