@@ -1,7 +1,4 @@
 #Spatial-Temporal Multi-Head Graph Attention Networks for Traffic Forecasting
-<p align="center">
-  <img width="600" height="450" src=./figure/architecture.jpg>
-</p>
 
 ![image](https://github.com/Kelang-Tian/ST-MGAT/blob/master/figure/architecture.jpg)
 
