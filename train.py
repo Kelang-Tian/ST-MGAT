@@ -6,8 +6,7 @@ import util
 import os
 import matplotlib.pyplot as plt
 import torch.nn as nn
-
-
+import pandas as pd
 from fastprogress import progress_bar
 import torch.nn.functional as F
 from model_stgat import stgat
@@ -20,7 +19,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 parser = argparse.ArgumentParser(description='STGAT')
 parser.add_argument('--adj_path', type=str, default='data/sensor_graph/adj_mx_distance_normalized.csv',
                     help='adj data path')
-parser.add_argument('--data_path', type=str, default='data/METR-LA12_shuffle', help='data path')
+parser.add_argument('--data_path', type=str, default='data/METR-LA', help='data path')
 
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')
 parser.add_argument('--num_nodes', type=int, default=207, help='number of nodes')
@@ -37,7 +36,7 @@ parser.add_argument('--activation', action="store_true", default=F.elu, help='  
 parser.add_argument('--residual', action="store_true", default=False, help='  ')
 parser.add_argument('--interval', type=int, default=100, help='')
 parser.add_argument('--num_epochs', type=int, default=100, help='')
-parser.add_argument('--save', type=str, default='./experiment/combine/continue_train_la_shuffle2/', help='save path')
+parser.add_argument('--save', type=str, default='./experiment/stgat/', help='save path')
 parser.add_argument('--expid', type=int, default=1, help='experiment id')
 
 parser.add_argument('--seq_len', type=int, default=12, help='time length of inputs')
@@ -77,7 +76,7 @@ def main():
     clip = 3
     run_gconv = 1
     best_mae = 100
-    continue_train = 1
+    continue_train = 0
     lr_decay_rate = 0.97
     record = []
 
@@ -90,8 +89,8 @@ def main():
         optimizer, lr_lambda=lambda epoch: lr_decay_rate ** epoch)
 
     loss = util.masked_mae
-    best_path = os.path.join(args.save, 'best_model.pth')
-    # 此处存疑，不知是否应该加/在路径中？？？？
+    best_path = os.path.join(args.save, 'best_model.pkl')
+    # / in path ？？？？
 
     # if you want to train model with the last parameters
     if continue_train:
@@ -115,8 +114,9 @@ def main():
 
             if trainx.shape[0] != args.batch_size:
                 continue
-
-            trainx = nn.functional.pad(trainx, (1, 0, 0, 0))
+            # print("117:", trainx.shape)
+            trainx = nn.functional.pad(trainx, (1, 0, 0, 0))    # ([64, 2, 207, 13])
+            # print("119:", trainx.shape)
             pred = model.forward(trainx).squeeze(3)
             pred = scaler.inverse_transform(pred)
             # pred = test_scaler.inverse_transform(pred)
@@ -267,158 +267,8 @@ if __name__ == "__main__":
     main()
 
 
-"""
-bestid:  98
-path:  ./experiment/combine/shuffle_batched_gat_2l_lr_decay/epoch98_2.97.pkl
-201 y_test: torch.Size([6850, 12, 207])
-==========
-yhat: torch.Size([6850, 12, 207])
-target: torch.Size([6850, 12, 207])
-test data for 1, Test MAPE: 5.2449, Test RMSE: 3.8783, Test MAE: 2.2221
-test data for 2, Test MAPE: 6.2688, Test RMSE: 4.7217, Test MAE: 2.5051
-test data for 3, Test MAPE: 6.9492, Test RMSE: 5.2209, Test MAE: 2.6865
-test data for 4, Test MAPE: 7.4869, Test RMSE: 5.5772, Test MAE: 2.8172
-test data for 5, Test MAPE: 7.9169, Test RMSE: 5.8529, Test MAE: 2.9330
-test data for 6, Test MAPE: 8.3146, Test RMSE: 6.0767, Test MAE: 3.0239
-test data for 7, Test MAPE: 8.6419, Test RMSE: 6.2648, Test MAE: 3.1102
-test data for 8, Test MAPE: 8.9286, Test RMSE: 6.4290, Test MAE: 3.1845
-test data for 9, Test MAPE: 9.1654, Test RMSE: 6.5784, Test MAE: 3.2558
-test data for 10, Test MAPE: 9.4073, Test RMSE: 6.7209, Test MAE: 3.3114
-test data for 11, Test MAPE: 9.7494, Test RMSE: 6.8822, Test MAE: 3.3878
-test data for 12, Test MAPE: 9.9665, Test RMSE: 7.0211, Test MAE: 3.4582
-On average over 12 horizons, Test MAE: 2.9913, Test MAPE: 8.1700, Test RMSE: 5.9353
-
-bestid:  145
-path:  ./experiment/combine/continue_train_la_shuffle/epoch145_2.88.pkl
-201 y_test: torch.Size([6850, 12, 207])
-==========
-yhat: torch.Size([6850, 12, 207])
-target: torch.Size([6850, 12, 207])
-test data for 1, Test MAPE: 5.1872, Test RMSE: 3.8578, Test MAE: 2.2097
-test data for 2, Test MAPE: 6.1635, Test RMSE: 4.6639, Test MAE: 2.4798
-test data for 3, Test MAPE: 6.7759, Test RMSE: 5.1203, Test MAE: 2.6453
-test data for 4, Test MAPE: 7.2431, Test RMSE: 5.4244, Test MAE: 2.7544
-test data for 5, Test MAPE: 7.5912, Test RMSE: 5.6581, Test MAE: 2.8518
-test data for 6, Test MAPE: 7.9169, Test RMSE: 5.8512, Test MAE: 2.9257
-test data for 7, Test MAPE: 8.1781, Test RMSE: 6.0058, Test MAE: 2.9963
-test data for 8, Test MAPE: 8.4093, Test RMSE: 6.1480, Test MAE: 3.0583
-test data for 9, Test MAPE: 8.5927, Test RMSE: 6.2825, Test MAE: 3.1191
-test data for 10, Test MAPE: 8.8178, Test RMSE: 6.4177, Test MAE: 3.1701
-test data for 11, Test MAPE: 9.1277, Test RMSE: 6.5743, Test MAE: 3.2407
-test data for 12, Test MAPE: 9.3537, Test RMSE: 6.7198, Test MAE: 3.3107
-On average over 12 horizons, Test MAE: 2.8968, Test MAPE: 7.7798, Test RMSE: 5.7270
-"""
 
 
-"""
-bestid:  99
-path:  ./experiment/combine/bay_shuffle_batched_gat_2l_lr_decay/epoch99_1.51.pkl
-201 y_test: torch.Size([10419, 12, 325])
-==========
-yhat: torch.Size([10419, 12, 325])
-target: torch.Size([10419, 12, 325])
-test data for 1, Test MAPE: 1.5964, Test RMSE: 1.5188, Test MAE: 0.8356
-test data for 2, Test MAPE: 2.1939, Test RMSE: 2.1716, Test MAE: 1.0977
-test data for 3, Test MAPE: 2.6323, Test RMSE: 2.6609, Test MAE: 1.2738
-test data for 4, Test MAPE: 2.9648, Test RMSE: 3.0165, Test MAE: 1.3973
-test data for 5, Test MAPE: 3.2209, Test RMSE: 3.2762, Test MAE: 1.4882
-test data for 6, Test MAPE: 3.4300, Test RMSE: 3.4747, Test MAE: 1.5616
-test data for 7, Test MAPE: 3.6045, Test RMSE: 3.6270, Test MAE: 1.6209
-test data for 8, Test MAPE: 3.7476, Test RMSE: 3.7500, Test MAE: 1.6712
-test data for 9, Test MAPE: 3.8710, Test RMSE: 3.8539, Test MAE: 1.7162
-test data for 10, Test MAPE: 3.9993, Test RMSE: 3.9561, Test MAE: 1.7617
-test data for 11, Test MAPE: 4.1172, Test RMSE: 4.0480, Test MAE: 1.8034
-test data for 12, Test MAPE: 4.2424, Test RMSE: 4.1451, Test MAE: 1.8502
-On average over 12 horizons, Test MAE: 1.5065, Test MAPE: 3.3017, Test RMSE: 3.2916
-"""
-
-"""
-bestid:  99
-path:  ./experiment/combine/continue_train_bay_shuffle/epoch99_1.47.pkl
-201 y_test: torch.Size([10419, 12, 325])
-==========
-yhat: torch.Size([10419, 12, 325])
-target: torch.Size([10419, 12, 325])
-test data for 1, Test MAPE: 1.5865, Test RMSE: 1.5130, Test MAE: 0.8315
-test data for 2, Test MAPE: 2.1732, Test RMSE: 2.1537, Test MAE: 1.0891
-test data for 3, Test MAPE: 2.5966, Test RMSE: 2.6265, Test MAE: 1.2586
-test data for 4, Test MAPE: 2.9073, Test RMSE: 2.9620, Test MAE: 1.3740
-test data for 5, Test MAPE: 3.1442, Test RMSE: 3.2018, Test MAE: 1.4575
-test data for 6, Test MAPE: 3.3370, Test RMSE: 3.3844, Test MAE: 1.5249
-test data for 7, Test MAPE: 3.4961, Test RMSE: 3.5238, Test MAE: 1.5782
-test data for 8, Test MAPE: 3.6293, Test RMSE: 3.6360, Test MAE: 1.6243
-test data for 9, Test MAPE: 3.7471, Test RMSE: 3.7357, Test MAE: 1.6661
-test data for 10, Test MAPE: 3.8636, Test RMSE: 3.8359, Test MAE: 1.7090
-test data for 11, Test MAPE: 3.9775, Test RMSE: 3.9286, Test MAE: 1.7494
-test data for 12, Test MAPE: 4.1082, Test RMSE: 4.0323, Test MAE: 1.7977
-On average over 12 horizons, Test MAE: 1.4717, Test MAPE: 3.2139, Test RMSE: 3.2111
-
-
-
-bestid:  96
-path:  ./experiment/combine/continue_continue_train_bay_shuffle/epoch96_1.45.pkl
-201 y_test: torch.Size([10419, 12, 325])
-==========
-yhat: torch.Size([10419, 12, 325])
-target: torch.Size([10419, 12, 325])
-test data for 1, Test MAPE: 1.5854, Test RMSE: 1.5103, Test MAE: 0.8305
-test data for 2, Test MAPE: 2.1630, Test RMSE: 2.1441, Test MAE: 1.0855
-test data for 3, Test MAPE: 2.5722, Test RMSE: 2.6067, Test MAE: 1.2513
-test data for 4, Test MAPE: 2.8688, Test RMSE: 2.9322, Test MAE: 1.3627
-test data for 5, Test MAPE: 3.0928, Test RMSE: 3.1616, Test MAE: 1.4428
-test data for 6, Test MAPE: 3.2751, Test RMSE: 3.3346, Test MAE: 1.5068
-test data for 7, Test MAPE: 3.4230, Test RMSE: 3.4667, Test MAE: 1.5580
-test data for 8, Test MAPE: 3.5503, Test RMSE: 3.5727, Test MAE: 1.6024
-test data for 9, Test MAPE: 3.6618, Test RMSE: 3.6692, Test MAE: 1.6425
-test data for 10, Test MAPE: 3.7781, Test RMSE: 3.7691, Test MAE: 1.6846
-test data for 11, Test MAPE: 3.8927, Test RMSE: 3.8640, Test MAE: 1.7250
-test data for 12, Test MAPE: 4.0279, Test RMSE: 3.9713, Test MAE: 1.7741
-On average over 12 horizons, Test MAE: 1.4555, Test MAPE: 3.1576, Test RMSE: 3.1669
-"""
-
-
-"""
-bestid:  40
-path:  ./experiment/combine/no_gconv_LA12_shuffl/epoch40_3.41.pkl
-201 y_test: torch.Size([6850, 12, 207])
-==========
-yhat: torch.Size([6850, 12, 207])
-target: torch.Size([6850, 12, 207])
-test data for 1, Test MAPE: 5.4220, Test RMSE: 4.0468, Test MAE: 2.2941
-test data for 2, Test MAPE: 6.6058, Test RMSE: 5.0556, Test MAE: 2.6334
-test data for 3, Test MAPE: 7.4530, Test RMSE: 5.7208, Test MAE: 2.8814
-test data for 4, Test MAPE: 8.2228, Test RMSE: 6.2450, Test MAE: 3.0833
-test data for 5, Test MAPE: 8.8856, Test RMSE: 6.6767, Test MAE: 3.2745
-test data for 6, Test MAPE: 9.5480, Test RMSE: 7.0517, Test MAE: 3.4416
-test data for 7, Test MAPE: 10.1312, Test RMSE: 7.3614, Test MAE: 3.5951
-test data for 8, Test MAPE: 10.6934, Test RMSE: 7.6490, Test MAE: 3.7387
-test data for 9, Test MAPE: 11.1815, Test RMSE: 7.9042, Test MAE: 3.8746
-test data for 10, Test MAPE: 11.6734, Test RMSE: 8.1357, Test MAE: 3.9884
-test data for 11, Test MAPE: 12.2398, Test RMSE: 8.3625, Test MAE: 4.1132
-test data for 12, Test MAPE: 12.6592, Test RMSE: 8.5570, Test MAE: 4.2245
-On average over 12 horizons, Test MAE: 3.4286, Test MAPE: 9.5596, Test RMSE: 6.8972
-"""
-
-"""
-bestid:  47
-path:  ./experiment/combine/no_gconv_BAY12_shuffl/epoch47_1.79.pkl
-201 y_test: torch.Size([10419, 12, 325])
-==========
-yhat: torch.Size([10419, 12, 325])
-target: torch.Size([10419, 12, 325])
-test data for 1, Test MAPE: 1.6327, Test RMSE: 1.5748, Test MAE: 0.8590
-test data for 2, Test MAPE: 2.2952, Test RMSE: 2.3264, Test MAE: 1.1536
-test data for 3, Test MAPE: 2.8362, Test RMSE: 2.9379, Test MAE: 1.3725
-test data for 4, Test MAPE: 3.3030, Test RMSE: 3.4261, Test MAE: 1.5459
-test data for 5, Test MAPE: 3.7196, Test RMSE: 3.8237, Test MAE: 1.6919
-test data for 6, Test MAPE: 4.0937, Test RMSE: 4.1586, Test MAE: 1.8196
-test data for 7, Test MAPE: 4.4263, Test RMSE: 4.4400, Test MAE: 1.9298
-test data for 8, Test MAPE: 4.7229, Test RMSE: 4.6777, Test MAE: 2.0278
-test data for 9, Test MAPE: 4.9931, Test RMSE: 4.8817, Test MAE: 2.1167
-test data for 10, Test MAPE: 5.2583, Test RMSE: 5.0679, Test MAE: 2.2014
-test data for 11, Test MAPE: 5.4838, Test RMSE: 5.2285, Test MAE: 2.2759
-test data for 12, Test MAPE: 5.7120, Test RMSE: 5.3822, Test MAE: 2.3504
-On average over 12 horizons, Test MAE: 1.7787, Test MAPE: 4.0397, Test RMSE: 3.9938
 """
 import torch
 import numpy as np
@@ -661,92 +511,3 @@ if __name__ == "__main__":
 
 
 """
-bestid:  98
-path:  ./experiment/combine/shuffle_batched_gat_2l_lr_decay/epoch98_2.97.pkl
-201 y_test: torch.Size([6850, 12, 207])
-==========
-yhat: torch.Size([6850, 12, 207])
-target: torch.Size([6850, 12, 207])
-test data for 1, Test MAPE: 5.2449, Test RMSE: 3.8783, Test MAE: 2.2221
-test data for 2, Test MAPE: 6.2688, Test RMSE: 4.7217, Test MAE: 2.5051
-test data for 3, Test MAPE: 6.9492, Test RMSE: 5.2209, Test MAE: 2.6865
-test data for 4, Test MAPE: 7.4869, Test RMSE: 5.5772, Test MAE: 2.8172
-test data for 5, Test MAPE: 7.9169, Test RMSE: 5.8529, Test MAE: 2.9330
-test data for 6, Test MAPE: 8.3146, Test RMSE: 6.0767, Test MAE: 3.0239
-test data for 7, Test MAPE: 8.6419, Test RMSE: 6.2648, Test MAE: 3.1102
-test data for 8, Test MAPE: 8.9286, Test RMSE: 6.4290, Test MAE: 3.1845
-test data for 9, Test MAPE: 9.1654, Test RMSE: 6.5784, Test MAE: 3.2558
-test data for 10, Test MAPE: 9.4073, Test RMSE: 6.7209, Test MAE: 3.3114
-test data for 11, Test MAPE: 9.7494, Test RMSE: 6.8822, Test MAE: 3.3878
-test data for 12, Test MAPE: 9.9665, Test RMSE: 7.0211, Test MAE: 3.4582
-On average over 12 horizons, Test MAE: 2.9913, Test MAPE: 8.1700, Test RMSE: 5.9353
-"""
-
-
-"""
-bestid:  99
-path:  ./experiment/combine/bay_shuffle_batched_gat_2l_lr_decay/epoch99_1.51.pkl
-201 y_test: torch.Size([10419, 12, 325])
-==========
-yhat: torch.Size([10419, 12, 325])
-target: torch.Size([10419, 12, 325])
-test data for 1, Test MAPE: 1.5964, Test RMSE: 1.5188, Test MAE: 0.8356
-test data for 2, Test MAPE: 2.1939, Test RMSE: 2.1716, Test MAE: 1.0977
-test data for 3, Test MAPE: 2.6323, Test RMSE: 2.6609, Test MAE: 1.2738
-test data for 4, Test MAPE: 2.9648, Test RMSE: 3.0165, Test MAE: 1.3973
-test data for 5, Test MAPE: 3.2209, Test RMSE: 3.2762, Test MAE: 1.4882
-test data for 6, Test MAPE: 3.4300, Test RMSE: 3.4747, Test MAE: 1.5616
-test data for 7, Test MAPE: 3.6045, Test RMSE: 3.6270, Test MAE: 1.6209
-test data for 8, Test MAPE: 3.7476, Test RMSE: 3.7500, Test MAE: 1.6712
-test data for 9, Test MAPE: 3.8710, Test RMSE: 3.8539, Test MAE: 1.7162
-test data for 10, Test MAPE: 3.9993, Test RMSE: 3.9561, Test MAE: 1.7617
-test data for 11, Test MAPE: 4.1172, Test RMSE: 4.0480, Test MAE: 1.8034
-test data for 12, Test MAPE: 4.2424, Test RMSE: 4.1451, Test MAE: 1.8502
-On average over 12 horizons, Test MAE: 1.5065, Test MAPE: 3.3017, Test RMSE: 3.2916
-"""
-
-"""
-bestid:  40
-path:  ./experiment/combine/no_gconv_LA12_shuffl/epoch40_3.41.pkl
-201 y_test: torch.Size([6850, 12, 207])
-==========
-yhat: torch.Size([6850, 12, 207])
-target: torch.Size([6850, 12, 207])
-test data for 1, Test MAPE: 5.4220, Test RMSE: 4.0468, Test MAE: 2.2941
-test data for 2, Test MAPE: 6.6058, Test RMSE: 5.0556, Test MAE: 2.6334
-test data for 3, Test MAPE: 7.4530, Test RMSE: 5.7208, Test MAE: 2.8814
-test data for 4, Test MAPE: 8.2228, Test RMSE: 6.2450, Test MAE: 3.0833
-test data for 5, Test MAPE: 8.8856, Test RMSE: 6.6767, Test MAE: 3.2745
-test data for 6, Test MAPE: 9.5480, Test RMSE: 7.0517, Test MAE: 3.4416
-test data for 7, Test MAPE: 10.1312, Test RMSE: 7.3614, Test MAE: 3.5951
-test data for 8, Test MAPE: 10.6934, Test RMSE: 7.6490, Test MAE: 3.7387
-test data for 9, Test MAPE: 11.1815, Test RMSE: 7.9042, Test MAE: 3.8746
-test data for 10, Test MAPE: 11.6734, Test RMSE: 8.1357, Test MAE: 3.9884
-test data for 11, Test MAPE: 12.2398, Test RMSE: 8.3625, Test MAE: 4.1132
-test data for 12, Test MAPE: 12.6592, Test RMSE: 8.5570, Test MAE: 4.2245
-On average over 12 horizons, Test MAE: 3.4286, Test MAPE: 9.5596, Test RMSE: 6.8972
-"""
-
-"""
-bestid:  47
-path:  ./experiment/combine/no_gconv_BAY12_shuffl/epoch47_1.79.pkl
-201 y_test: torch.Size([10419, 12, 325])
-==========
-yhat: torch.Size([10419, 12, 325])
-target: torch.Size([10419, 12, 325])
-test data for 1, Test MAPE: 1.6327, Test RMSE: 1.5748, Test MAE: 0.8590
-test data for 2, Test MAPE: 2.2952, Test RMSE: 2.3264, Test MAE: 1.1536
-test data for 3, Test MAPE: 2.8362, Test RMSE: 2.9379, Test MAE: 1.3725
-test data for 4, Test MAPE: 3.3030, Test RMSE: 3.4261, Test MAE: 1.5459
-test data for 5, Test MAPE: 3.7196, Test RMSE: 3.8237, Test MAE: 1.6919
-test data for 6, Test MAPE: 4.0937, Test RMSE: 4.1586, Test MAE: 1.8196
-test data for 7, Test MAPE: 4.4263, Test RMSE: 4.4400, Test MAE: 1.9298
-test data for 8, Test MAPE: 4.7229, Test RMSE: 4.6777, Test MAE: 2.0278
-test data for 9, Test MAPE: 4.9931, Test RMSE: 4.8817, Test MAE: 2.1167
-test data for 10, Test MAPE: 5.2583, Test RMSE: 5.0679, Test MAE: 2.2014
-test data for 11, Test MAPE: 5.4838, Test RMSE: 5.2285, Test MAE: 2.2759
-test data for 12, Test MAPE: 5.7120, Test RMSE: 5.3822, Test MAE: 2.3504
-On average over 12 horizons, Test MAE: 1.7787, Test MAPE: 4.0397, Test RMSE: 3.9938
-"""
-
-

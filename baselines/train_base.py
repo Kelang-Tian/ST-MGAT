@@ -21,7 +21,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 parser = argparse.ArgumentParser()
 parser.add_argument('--adj_path', type=str, default='../data/sensor_graph/adj_mx.pkl',
                     help='adj data path')
-parser.add_argument('--data_path', type=str, default='../data/METR-LA12', help='data path')
+parser.add_argument('--data_path', type=str, default='../data/METR-LA', help='data path')
 
 parser.add_argument('--adjtype', type=str, default='doubletransition', help='adj type')
 parser.add_argument('--gcn_bool', action='store_true', help='whether to add graph convolution layer')

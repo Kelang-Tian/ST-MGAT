@@ -7,39 +7,12 @@ import os
 import matplotlib.pyplot as plt
 import torch.nn as nn
 import pandas as pd
-
-
-from fastprogress import progress_bar
 import torch.nn.functional as F
 from model_stgat import stgat
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-parser = argparse.ArgumentParser(description='STGAT')
-parser.add_argument('--adj_path', type=str, default='data/sensor_graph/adj_mx_distance_normalized.csv',
-                    help='adj data path')
-parser.add_argument('--data_path', type=str, default='data/METR-LA12_shuffle', help='data path')
-parser.add_argument('--batch_size', type=int, default=64, help='batch size')
-parser.add_argument('--num_nodes', type=int, default=207, help='number of nodes')
-parser.add_argument('--num_layers', type=int, default=1, help='layers of gat')
-parser.add_argument('--in_dim', type=int, default=2, help='number of nodes features')
-parser.add_argument('--num_hidden', type=int, default=8, help='number of hidden in gat')
-parser.add_argument('--out_dim', type=int, default=8, help='number of out_dim')
-parser.add_argument('--heads', type=int, default=8, help='number of out_dim')
-parser.add_argument('--feat_drop', type=int, default=0.6, help='  ')
-parser.add_argument('--attn_drop', type=int, default=0.6, help='  ')
-parser.add_argument('--negative_slope', type=int, default=0.2, help='  ')
-parser.add_argument('--activation', action="store_true", default=F.elu, help='  ')
-parser.add_argument('--residual', action="store_true", default=False, help='  ')
-parser.add_argument('--interval', type=int, default=100, help='')
-parser.add_argument('--num_epochs', type=int, default=100, help='')
-parser.add_argument('--save', type=str, default='./experiment/combine/continue_train_la_shuffle2/', help='save path')
-parser.add_argument('--expid', type=int, default=1, help='experiment id')
-parser.add_argument('--seq_len', type=int, default=12, help='time length of inputs')
-parser.add_argument('--pre_len', type=int, default=12, help='time length of prediction')
-
-args = parser.parse_args()
 
 if torch.cuda.is_available():
     device = torch.device("cuda:0")
@@ -72,17 +45,23 @@ def run_demo(best_path, record_save_path):
     scheduler = torch.optim.lr_scheduler.LambdaLR(
         optimizer, lr_lambda=lambda epoch: lr_decay_rate ** epoch)
 
-    model.load_state_dict(torch.load(best_path))
+    if torch.cuda.is_available():
+        model.load_state_dict(torch.load(best_path))
+    else:
+        model.load_state_dict(torch.load(best_path, map_location='cpu'))
 
     outputs = []
     target = torch.Tensor(dataloader['y_test']).to(device)
     target = target[:, :, :, 0]
+    print("201 y_test:", target.shape)
 
     for iter, (x, y) in enumerate(dataloader['test_loader'].get_iterator()):
         testx = torch.Tensor(x).to(device).transpose(1, 3)
         testx = nn.functional.pad(testx, (1, 0, 0, 0))
         with torch.no_grad():
             pred = model.forward(testx).squeeze(3)
+        print("iter: ", iter)
+        print("pred: ", pred.shape)
         outputs.append(pred)
 
     yhat = torch.cat(outputs, dim=0)
@@ -117,11 +96,47 @@ def mkdir(path):
 
 
 if __name__ == "__main__":
-    base_path = './pre_train_model/BAY_dataset'     # or ./pre_train_model/LA_dataset/
-    best_path = f'{base_path}/stgat_1.45.pkl'
-    # best_path = './pre_train_model/BAY_dataset/stgat_2.88.pkl'
+    parser = argparse.ArgumentParser(description='STGAT')
+    parser.add_argument('--adj_path', type=str, default='data/sensor_graph/adj_mx_bay_distance_normalized.csv',
+                        help='adj data path')
+    parser.add_argument('--data_path', type=str, default='data/PEMS-BAY', help='data path')
+    parser.add_argument('--batch_size', type=int, default=64, help='batch size')
+    parser.add_argument('--num_nodes', type=int, default=325, help='number of nodes')
+    parser.add_argument('--num_layers', type=int, default=1, help='layers of gat')
+    parser.add_argument('--in_dim', type=int, default=2, help='number of nodes features')
+    parser.add_argument('--num_hidden', type=int, default=8, help='number of hidden in gat')
+    parser.add_argument('--out_dim', type=int, default=8, help='number of out_dim')
+    parser.add_argument('--heads', type=int, default=8, help='number of out_dim')
+    parser.add_argument('--feat_drop', type=int, default=0.6, help='  ')
+    parser.add_argument('--attn_drop', type=int, default=0.6, help='  ')
+    parser.add_argument('--negative_slope', type=int, default=0.2, help='  ')
+    parser.add_argument('--activation', action="store_true", default=F.elu, help='  ')
+    parser.add_argument('--residual', action="store_true", default=False, help='  ')
+    parser.add_argument('--interval', type=int, default=100, help='')
+    parser.add_argument('--num_epochs', type=int, default=100, help='')
+    parser.add_argument('--expid', type=int, default=1, help='experiment id')
+    parser.add_argument('--seq_len', type=int, default=12, help='time length of inputs')
+    parser.add_argument('--pre_len', type=int, default=12, help='time length of prediction')
+    parser.add_argument("--base_path",
+                        type=str,
+                        default="./pre_train_model/BAY_dataset",
+                        help="or  ./pre_train_model/LA_dataset")
+
+    parser.add_argument("--best_model_path",
+                        type=str,
+                        default="stgat_1.45.pkl",
+                        help="or stgat_2.84.pkl")
+    args = parser.parse_args()
+
+    base_path = args.base_path
+    best_model_path = f'{base_path}/{args.best_model_path}'
+
+
+    # base_path = './pre_train_model/BAY_dataset'
+    # # or ./pre_train_model/LA_dataset/
+    # best_model_path = f'{base_path}/stgat_1.45.pkl'
+    # # best_model_path = './pre_train_model/LA_dataset/stgat_2.84.pkl'
 
     record_save_path = f'{base_path}/stgat'
     mkdir(record_save_path)
-
-    run_demo(best_path, record_save_path)
+    run_demo(best_model_path, record_save_path)

@@ -155,12 +155,16 @@ def load_dataset(device, dataset_dir, batch_size, valid_batch_size=None, test_ba
         cat_data = np.load(os.path.join(dataset_dir, category + '.npz'))
         data['x_' + category] = cat_data['x']
         data['y_' + category] = cat_data['y']
-    print("159mean: ", data['x_train'][..., 0].mean(), data['x_train'][..., 0].shape, type(data['x_train'][..., 0]))
-    print("160std: ", data['x_train'][..., 0].std(), data['x_train'][..., 0].shape, )
+    print("mean: ", data['x_train'][..., 0].mean(),)
+    print("std: ", data['x_train'][..., 0].std(),)
+    print("data['x_train'][..., 0]: ", data['x_train'][..., 0].shape, )
+    # mean: 53.70874249963328
+    # std: 20.30008437118619
+    # data['x_train'][..., 0]: (23974, 12, 207)
 
     test_mean = data['x_train'][:, :, :, 0].mean(axis=(0, 1), keepdims=True)
     test_std = data['x_train'][:, :, :, 0].std(axis=(0, 1), keepdims=True)
-    print("====165 test_mean:", test_mean.shape)    # (1, 325, 12)
+    # print(" test_mean:", test_mean.shape)    # (1, 325, 12)
     test_scaler = StandardScaler(mean=torch.Tensor(test_mean).to(device),
                                  std=torch.Tensor(test_std).to(device))
 

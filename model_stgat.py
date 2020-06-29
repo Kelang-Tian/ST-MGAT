@@ -85,6 +85,12 @@ class stgat(nn.Module):
                 # dilated convolutions
                 self.filter_convs.append(Conv2d(residual_channels, dilation_channels, (1, kernel_size), dilation=D))
                 self.gate_convs.append(Conv1d(residual_channels, dilation_channels, (1, kernel_size), dilation=D))
+                # batch, channel, height, width
+                # N,C,H,W
+                # d = (d - kennel_size + 2 * padding) / stride + 1
+                # H_out = [H_in + 2*padding[0] - dilation[0]*(kernal_size[0]-1)-1]/stride[0] + 1
+                # W_out = [W_in + 2*padding[1] - dilation[1]*(kernal_size[1]-1)-1]/stride[1] + 1
+
                 D *= 2
                 receptive_field += additional_scope
                 additional_scope *= 2
@@ -105,7 +111,7 @@ class stgat(nn.Module):
 
     def forward(self, x):
         # Input shape is (bs, features, n_nodes, n_timesteps)
-        # print("===131 x.shape: ", x.shape)  # torch.Size([64, 2, 207, 13])
+        print("===131 x.shape: ", x.shape)  # torch.Size([64, 2, 207, 13])
 
         in_len = x.size(3)
         if in_len < self.receptive_field:
@@ -116,6 +122,7 @@ class stgat(nn.Module):
         x2 = F.leaky_relu(self.cat_feature_conv(x[:, [1]]))
         # print("x1", x1.shape)       # [64, 40, 207, 13]
         # print("x2", x2.shape)       # [64, 40, 207, 13]
+        # batch, channel, height, width
         x = x1 + x2
         # print("x.shape:", x.shape)  # torch.Size([64, 40, 207, 13])
         skip = 0
@@ -132,7 +139,7 @@ class stgat(nn.Module):
             # filter:[64, 40, 207, 12/10/9/7/6/4/3/1]
 
             # parametrized skip connection
-            s = self.skip_convs[i](x)  # what are we skipping??  [64, 320, 207, 12/10/9]
+            s = self.skip_convs[i](x)  # [64, 320, 207, 12/10/9]
 
             try:  # if i > 0 this works
                 skip = skip[:, :, :, -s.size(3):]  # TODO(SS): Mean/Max Pool?
@@ -167,7 +174,7 @@ class stgat(nn.Module):
             x = self.bn[i](x)
             # print("x_last:", x.shape)  # [64, 40, 207, 12/10/9]
 
-        x = F.relu(skip)  # ignore last X?
+        x = F.relu(skip)  # ignore last X
         # print("201 skip: ", skip.shape)
         x = F.relu(self.end_conv_1(x))
         # print("203 x:", x.shape)
